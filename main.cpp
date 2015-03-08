@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-
+#include "solver.h"
 using namespace std;
 
 void disp_help()
@@ -26,10 +26,17 @@ int autosolve(int m,int n)
 
 int solve(int m,int n)
 {
-    cout << "Allocating the Space for Solver\n";
+    Solver Isolver(m,n);
     return 0;
 }
 
+int solve()
+{
+    Simplex_solver isolver;
+    isolver.print();
+    isolver.solve();
+    return 0;
+}
 int main(int argc, char** argv )
 {
     cout << "Integer Program Solver\n\n"; 
@@ -49,7 +56,7 @@ int main(int argc, char** argv )
         }
         else
         {
-            cout << "Unknown Args \n";
+            cout << " [Main Error] Unknown Args \n";
             return 1;
         }
     }
@@ -63,13 +70,7 @@ int main(int argc, char** argv )
     }
     else
     {
-        int m;
-        int n;
-        cout << "Enter the no of rows in matrix A\n";
-        cin >> m;
-        cout << "Enter the no of columns in matrix A\n";
-        cin >> n;
-        return solve(m,n);
+        return solve();
     }
     return 0;
 }
