@@ -1,8 +1,14 @@
 #include "solver.h"
-#include <memory>
+
+double abs(double x)
+{
+    if (x < 0) return -x;
+    return x;
+}
 
 Solver::Solver()
 {
+    flagSolver = 0;
     cout << "Give the integer value of row no of the Matrix A\n";
     cin >> rowNo;
     cout << "Give the integer value of column no of the Matrix A\n";
@@ -27,7 +33,6 @@ Solver::Solver()
     }
     b = new (nothrow) double [rowNo];
     C = new (nothrow) double [columnNo];
-    x = new (nothrow) double [columnNo];
     if (b == NULL || C == NULL)
     {
         cout << "[Solver ERROR] Memory can't be allocated\n";
@@ -57,6 +62,7 @@ Solver::Solver()
 
 Solver::Solver(int m, int n)
 {
+    flagSolver =0;
     rowNo = m;
     columnNo = n;
     cout << "[Solver] Allocating the space for solver\n";
@@ -72,8 +78,8 @@ Solver::Solver(int m, int n)
     }
     b = new (nothrow) double [rowNo];
     C = new (nothrow) double [columnNo];
-    x = new (nothrow) double [columnNo];
-    if (b == NULL || C == NULL || x == NULL)
+    x = new (nothrow) double [columnNo+rowNo];
+    if (b == NULL || C == NULL)
     {
         cout << "[Solver ERROR] Memory can't be allocated\n";
         exit(2);
@@ -101,11 +107,14 @@ Solver::Solver(int m, int n)
 
 Solver::Solver(int m ,int n,double **A_tmp,double *b_tmp,double *C_tmp)
 {
+    flagSolver = 0;
     rowNo = m;
     columnNo = n;
     A = A_tmp;
     b = b_tmp;
     C = C_tmp;
+
+    x = new (nothrow) double [columnNo+rowNo+50];
 }
 
 void Solver::print()
@@ -132,39 +141,159 @@ void Solver::print()
 
 int  Simplex_solver::checkZeroFeasibility()
 {
-    int flag = 1;
-    for (int i= 0;
+    cout << "[Simplex Solver] Checking Zero Feasibility\n";
+    int flag = 0;
+    for (int i =0 ; i < rowNo; i++)
+    {
+        if (b[i] < 0)
+        {
+            flag++;
+        }
+    }
+    cout <<"[Simplex_solver] flag "<< flag  << endl;
+    if (flag > 0)
+    {
+        int newRowNo = rowNo+1;
+        int newColumnNo = columnNo + flag;
+        Simplex_solver tmp(newRowNo,newColumnNo,NULL,NULL,NULL);
+        tmp.flagSolver = 2;
+        tmp.allocate_tableau();
+        cout << tmp.tableauRowNo<<" "<<tmp.tableauColumnNo << endl;
+        tmp.tableau[0][0]= 1;
+        for (int i =1; i <tmp.tableauRowNo;i++)
+        {
+            tmp.tableau[i][0] = 0;
+        }
+        for (int i = 1; i < columnNo+1;i++)
+        {
+            tmp.tableau[0][i] = 0;
+            tmp.tableau[1][i] = -C[i-1];
+        }
+        for (int i = 1+columnNo; i < 1+columnNo+rowNo;i++)
+        {
+            tmp.tableau[0][i] = 0;
+            tmp.tableau[1][i] = 0;
+        }
+        for (int i = 1+columnNo+rowNo; i < tmp.tableauColumnNo-1;i++)
+        {
+            tmp.tableau[0][i] = 1;
+            tmp.tableau[1][i] = 0;
+        }
+        tmp.tableau[0][tmp.tableauColumnNo-1]=0;
+        tmp.tableau[1][tmp.tableauColumnNo-1]=0;
+        for (int i =2; i <tmp.tableauRowNo;i++)
+        {
+            tmp.tableau[i][tmp.tableauColumnNo-1] = b[i-2];
+            if (b[i-2] < 0)
+            {
+                tmp.tableau[i][tmp.tableauColumnNo-1] = -b[i-2];
+            }
+        }
+        for (int i =0; i < rowNo;i++)
+        {
+            int multiplier = 1;
+            if (b[i] < 0) multiplier = -1;
+            for (int j=0;j<columnNo;j++)
+            {
+                tmp.tableau[i+2][j+1] = multiplier*A[i][j];
+            }
+        }
+        for (int i = 0; i < rowNo; i++)
+        {
+            for (int j=0;j<rowNo+flag;j++)
+            {
+                tmp.tableau[i+2][j+1+columnNo] = 0;
+                if ( i == j ) 
+                {
+
+                    tmp.tableau[i+2][j+1+columnNo] =1;
+                    if (b [i] <0)
+                    tmp.tableau[i+2][j+1+columnNo] =- 1;
+                }
+            }
+        }
+        int k = columnNo+rowNo+1;
+        for (int i =2 ;i<tmp.tableauRowNo;i++)
+        {
+            if (b[i-2] < 0)
+            {
+                tmp.tableau[i][k++] = 1;
+            }
+        } 
+        tmp.printtableau();
+        tmp.flagSolver =1;
+        tmp.solve();
+        cout << endl;
+        for (int i =0; i <rowNo;i++ )
+        {
+
+            if (abs(tmp.tableau[i+2][i+1]) > 10e-7)
+            {
+                tmp.pivot_operation(i+2,i+1);
+            }
+            cout << endl;
+            tmp.printtableau();
+        }
+        tmp.printtableau();
+        tableau[0][0] = 1;
+        for (int i = 1; i < tableauRowNo;i++)
+        {
+            tableau[i][0] = 0;
+        }
+        for (int i =0 ; i<rowNo+1 ;i++)
+        {
+            for (int j =0 ; j < tableauColumnNo-1; j++)
+            {
+                tableau[i][j+1] = tmp.tableau[i+1][j+1];
+            }
+            tableau[i][tableauColumnNo-1] = tmp.tableau[i+1][tmp.tableauColumnNo-1];
+        }
+        cout << endl;
+        printtableau();
+        cout << endl;
+    }
     return flag;
 }
+
 void Simplex_solver::solve()
 {
-    if (checkZeroFeasibility() == 1)
+    if ( flagSolver !=1)
     {
+
         allocate_tableau();
-        assign_tableau();
-        int k =0;
-        while ( true)
+        if (checkZeroFeasibility() == 0)
         {
-            k++;
-            cout << "[Simplex_solver] Iteration No: " << k << endl;
-            pivot_search();
-            if (pivot.column == -1 || pivot.row == -1) break;
-            //     cout << pivot.row <<" "<< pivot.column<< endl;
-            pivot_operation();
-            printtableau();
+            allocate_tableau();
+            assign_tableau();
         }
+        else
+        {
+            cout << "The problem doesn't have a fesible solution at zero \n";
+            cout <<"Using two way simplex to solve the problem\n";
+        }
+    }
+    int k =0;
+    while ( true)
+    {
+        k++;
+        cout << "[Simplex_solver] Iteration No: " << k << endl;
+        pivot_search();
+        cout << pivot.row <<" "<< pivot.column<< endl;
+        if (pivot.column == -1 ) break;
+        if (pivot.row == -1) break;
+        pivot_operation();
+        printtableau();
+    }
+    if (flagSolver !=1)
+    {
         initializeAnswer();
     }
-    else
-    {
-        cout << "The problem doesn't have a fesible solution at zero \n";
-    }
 }
+
 
 void Simplex_solver::initializeAnswer()
 {
-
-    x = new (nothrow) double [columnNo+rowNo];
+    cout << columnNo <<" " << rowNo << endl << endl ;
     Z = tableau [0][tableauColumnNo-1];
     for (int i =0 ; i < columnNo+rowNo; i++)
     {
@@ -201,63 +330,117 @@ void Simplex_solver::initializeAnswer()
 
 void Simplex_solver::pivot_operation()
 {
-    row_divide(pivot.row,tableau[pivot.row][pivot.column]);
-    for (int i =0 ; i < tableauRowNo;i++)
-    {
-        if ( i != pivot.row)
+    if ( abs(tableau[pivot.row][pivot.column]) >10e-7)
+    {    
+        row_divide(pivot.row,tableau[pivot.row][pivot.column]);
+        for (int i =0 ; i < tableauRowNo;i++)
         {
-            row_addition(i,pivot.row,-tableau[i][pivot.column]);
+            if ( i != pivot.row)
+            {
+                row_addition(i,pivot.row,-tableau[i][pivot.column]);
+            }
         }
     }
 }
-void Simplex_solver::pivot_search()
+
+void Simplex_solver::pivot_operation(int a,int b)
 {
-    int max_index;
-    double max;
-    max_index = 1;
-    max = tableau[0][1];
-    for(int i = 2 ; i<tableauColumnNo-1;i++)
+    pivot.row = a;
+    pivot.column  = b;
+
+    if ( abs(tableau[pivot.row][pivot.column]) > 10e-7)
     {
-        if ( max < tableau[0][i])
+        row_divide(pivot.row,tableau[pivot.row][pivot.column]);
+        for (int i =0 ; i < tableauRowNo;i++)
         {
-            max_index = i;
-            max = tableau[0][i];
+            if ( i != pivot.row)
+            {
+                row_addition(i,pivot.row,-tableau[i][pivot.column]);
+            }
         }
     }
-    if (max <= 0)
+}
+
+struct list
+{
+    double value;
+    int index;
+    list *next;
+};
+void Simplex_solver::pivot_search()
+{
+    list stack;
+    list *temp =NULL;
+    list *current =NULL;
+    stack.next = NULL;
+    stack.index = -1;
+    stack.value = 1;
+    for(int i = 1 ; i<tableauColumnNo-1;i++)
     {
-        pivot.column = -1;
-        return;
-    }
-    pivot.column = max_index;
-    double min;
-    double temp;
-    int min_index;
-    min_index = -1;
-    min = tableau[1][tableauColumnNo-1]/tableau[1][pivot.column];
-    if (min < 0)
-    {
-        min = 100000000000000000000.0;
-    }
-    for (int i =1 ; i < tableauRowNo;i++)
-    {
-        temp = tableau[i][tableauColumnNo-1]/tableau[i][pivot.column];
-        if (temp > 0)
+
+        temp = new list;
+        if (tableau[0][i] > 10e-7)
         {
-            if (temp <= min)
+            temp->index = i;
+            temp->value = tableau[0][i];
+            temp->next = NULL;
+
+            current = &stack;
+            while (current->next != NULL)
             {
-                min = temp;
-                min_index = i;
+                if (temp->value >= current->next->value)
+                {
+                    temp->next = current->next;
+                    break ;
+                }
+                current = current->next;
+
             }
+            current->next = temp;
         }
 
     }
-    pivot.row = min_index;
+    current = &stack;
+
+    while (current->next != NULL)
+    {
+        current = current->next;
+        pivot.column = current->index;
+        double min;
+        double temp2;
+        int min_index;
+        min_index = -1;
+        min = 100000000000000000000.0;
+        for (int i =1 ; i < tableauRowNo;i++)
+        {
+            temp2 = tableau[i][tableauColumnNo-1]/tableau[i][pivot.column];
+            if (temp2 > 0)
+            {
+                if (temp2 <= min)
+                {
+                    min = temp2;
+                    min_index = i;
+                }
+            }
+
+        }
+        pivot.row = min_index;
+        if (pivot.row > 0) 
+        {
+            return;
+        }
+    }
+    pivot.column = -1;
+    return;
 }
 void Simplex_solver::allocate_tableau()
 {
     tableauRowNo = rowNo+1;
     tableauColumnNo = rowNo+columnNo+2;
+    if (flagSolver == 2)
+    {
+        tableauColumnNo--;
+    }
     tableau = new (nothrow) double* [tableauRowNo];
     if (!tableau)
     {
@@ -295,13 +478,14 @@ void Simplex_solver::assign_tableau()
             tableau[i][j]=A[i-1][j-1];
         }
     }
-
-    for (int i = 1; i < tableauRowNo;i++)
+    int start = 1;
+    if (flagSolver == 2) start =2;
+    for (int i = start; i < tableauRowNo;i++)
     {
         for (int j =1+columnNo ; j < tableauColumnNo-1 ;j++)
         {
             tableau[i][j]=0;
-            if ( i - 1 == j -1 -columnNo) tableau[i][j]=1;
+            if ( i - start == j -1 -columnNo) tableau[i][j]=1;
         }
     }
 
