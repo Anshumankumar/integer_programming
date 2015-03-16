@@ -16,19 +16,18 @@ class Solver
         double *C;
         double *x;
         double  Z;
+        void check_answer();
     public:
         Solver();
         int flagSolver; //This is used to handle a special case for two way simplex
         Solver(int m,int n);
         Solver(int m ,int n,double **A_tmp,double *b_tmp,double *C_tmp);
         void print();
+        int solutionFlag;
+        double get_answer(double *);
+
 };
 
-class Integer_solver: public Solver
-{
-    public:
-        void solve();
-};
 
 class Simplex_solver:public Solver
 {
@@ -50,8 +49,8 @@ class Simplex_solver:public Solver
     double **tableau;
     void printtableau();
     void pivot_operation(int a,int b);
-    Simplex_solver(int m ,int n,double **A_tmp,double *b_tmp,double *C_tmp):
-        Solver(m,n,A_tmp,b_tmp,C_tmp) {}
+    Simplex_solver(int m ,int n,double **A_tmp,double *b_tmp,
+            double *C_tmp):Solver(m,n,A_tmp,b_tmp,C_tmp) {}
     Simplex_solver():Solver(){}
     void allocate_tableau();
     int tableauRowNo;

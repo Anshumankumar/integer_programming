@@ -1,0 +1,31 @@
+Author
+-Anshuman Kumar
+
+Written and tested in  Linux Machine
+
+This is a Integer Optimization tool. It solve both linear and integer
+and Programs.
+
+COMPILE
+--Linux
+ "make"
+
+--Windows
+  may be you need to change Makefile
+  just replace solver with solver.exe in Makefile
+  make
+
+RUN
+
+Integer Solver
+./solver 
+
+Simplex Solver
+./solver -s
+
+You can redirect the input file using "<<"
+ Example ./solver << input5.txt
+
+
+Thank you
+Have fun

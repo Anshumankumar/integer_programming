@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include "solver.h"
+#include "integer_solver.h"
 using namespace std;
 
 void disp_help()
@@ -32,11 +33,21 @@ int solve(int m,int n)
 
 int solve()
 {
-    Simplex_solver isolver;
+    Integer_solver isolver(NULL);
     isolver.print();
     isolver.solve();
     return 0;
 }
+
+int sim_solve()
+{
+    Simplex_solver solver;
+    solver.print();
+    solver.solve();
+    return 0;
+}
+
+
 int main(int argc, char** argv )
 {
     cout << "Integer Program Solver\n\n"; 
@@ -48,6 +59,13 @@ int main(int argc, char** argv )
             disp_help();
             return 0;
         }
+        temp ="-s";
+         if ( temp.compare(argv[1]) == 0 )
+        {
+            sim_solve();
+            return 0;
+        }
+
         temp = "--auto";
         if ( temp.compare(argv[1]) == 0 )
         {
